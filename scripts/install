@@ -47,8 +47,34 @@ function install_sympa_dependencies()
 {
     cd /tmp/
     sudo apt-get update
-	sudo apt-get install -y automake gettext build-essential libxml-perl libmime-lite-html-perl mhonarc libssl-dev libcrypt-smime-perl libdbd-csv-perl xml-twig-tools
-	echo -e "yes\nq" | sudo cpan Archive::Zip CGI Class::Singleton DateTime::Format::Mail DateTime::TimeZone DBI Digest::MD5 Email::Simple Encode File::Copy::Recursive File::NFSLock HTML::FormatText HTML::StripScripts::Parser HTML::TreeBuilder IO::File IO::Scalar List::Util::XS Locale::Messages LWP::UserAgent Mail::Address MIME::Base64 MIME::Charset MIME::EncWords MIME::Tools Net::CIDR Net::DNS Proc::ProcessTable Template Term::ProgressBar Text::LineFold Time::HiRes URI::Escape MHonArc::UTF8 AuthCAS Clone Crypt::CipherSaber Crypt::OpenSSL::X509 Data::Password Mail::DKIM::Verifier Net::LDAP SOAP::Lite | tee sympa-cpan-deps-install.log | grep "Running install for module"
+	sudo apt-get install -y \
+        build-essential libxml-perl libmime-lite-html-perl mhonarc libssl-dev \
+        libcrypt-smime-perl libdbd-csv-perl xml-twig-tools libxml2-dev \
+        libsoap-lite-perl libdbi-perl libarchive-zip-perl libmailtools-perl \
+        libmsgcat-perl libmime-tools-perl libio-stringy-perl libnet-ldap-perl \
+        libcgi-fast-perl libintl-perl libmime-charset-perl libmime-encwords-perl \
+        libtemplate-perl libxml-libxml-perl libcgi-pm-perl \
+        libhtml-stripscripts-parser-perl libhtml-tree-perl libhtml-format-perl \
+        mhonarc libregexp-common-perl libclass-singleton-perl \
+        libdatetime-format-mail-perl libdatetime-timezone-perl libdbi-perl \
+        libemail-simple-perl libencode-perl libfile-copy-recursive-perl \
+        libfile-nfslock-perl libhtml-stripscripts-parser-perl \
+        libmime-charset-perl libmime-encwords-perl libmime-tools-perl \
+        libnet-cidr-perl libnet-dns-perl libproc-processtable-perl \
+        libtemplate-perl libterm-progressbar-perl libauthcas-perl libclone-perl \
+        libcrypt-ciphersaber-perl libcrypt-openssl-x509-perl \
+        libdata-password-perl libmail-dkim-perl liburi-perl \
+        libunicode-linebreak-perl libmailtools-perl libwww-perl libintl-perl \
+        libscalar-list-utils-perl libio-stringy-perl libhtml-tree-perl \
+
+    yes yes | sudo cpan -T \
+        HTML::FormatText \
+        MIME::Base64 \
+        Time::HiRes \
+        MHonArc::UTF8 \
+        2>&1 \
+        | tee sympa-cpan-deps-install.log \
+        | grep "Running install for module"
 }
 
 function install_sympa_from_sources()
