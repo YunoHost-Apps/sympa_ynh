@@ -39,7 +39,7 @@ function init_sympa_mysqldb()
 	# Initialize database and store mysql password for upgrade
     # FIXME
 	sudo yunohost app initdb $db_user -p $db_pwd || echo "FIXME: Database already exists"
-	sudo yunohost app setting $APP mysqlpassword -v $db_pwd
+	ynh_app_setting_set "$APP" mysqlpassword     "$db_pwd"
 
 }
 
