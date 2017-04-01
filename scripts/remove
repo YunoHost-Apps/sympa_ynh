@@ -1,4 +1,5 @@
 #!/bin/bash
+set -u
 
 # See comments in install script
 app=$YNH_APP_INSTANCE_NAME

@@ -7,6 +7,7 @@
         "fr": "Gestionnaire de liste de diffusion"
     },
     "url": "https://www.sympa.org/",
+    "version": "6.2.16-1",
     "license": "free",
     "maintainer": {
         "name": "alexAubin",
@@ -19,7 +20,8 @@
     "multi_instance": false,
     "services": [
         "nginx",
-        "mysql"
+        "mysql",
+        "postfix"
     ],
     "arguments": {
         "install" : [
@@ -57,8 +59,8 @@
                     "en": "Choose the application language",
                     "fr": "Choisissez la langue de l'application"
                 },
-                "choices": ["fr", "en"],
-                "default": "fr"
+                "choices": ["en", "fr", "fi", "bg", "eo", "af", "ca", "pl", "ja", "el", "tr", "ml", "oc", "gl", "et", "sv", "br", "ru", "eu", "de", "zh_TW", "vi", "id", "zh_CN", "ro", "cs", "it", "nl", "pt_BR", "ko", "hu",     "es", "ar", "pt"],
+                "default": "en"
             }
         ]
     }
