@@ -1,0 +1,90 @@
+#!/bin/bash
+
+# Exit on command errors and treat unset variables as an error
+set -eu
+
+# Arguments from manifest
+readonly APP=$YNH_APP_INSTANCE_NAME
+readonly DOMAIN=$YNH_APP_ARG_DOMAIN
+readonly APP_URI=$YNH_APP_ARG_PATH
+readonly APP_ADMIN=$YNH_APP_ARG_ADMIN
+readonly APP_LANGUAGE=$YNH_APP_ARG_LANGUAGE
+
+readonly APP_INSTALL_PATH="/var/www/sympa"
+readonly NGINX_CONF_TEMPLATE="$PWD/../conf/nginx.conf"
+
+# Source YunoHost helpers
+source /usr/share/yunohost/helpers
+   
+readonly SYMPA_VERSION="sympa-6.2.16"
+
+function configure_app()
+{
+    # Save app settings
+    ynh_app_setting_set "$APP" admin     "$APP_ADMIN"
+    ynh_app_setting_set "$APP" is_public "$APP_IS_PUBLIC"
+    ynh_app_setting_set "$APP" language  "$APP_LANGUAGE"
+
+    # Check domain/path availability
+    sudo yunohost app checkurl "${DOMAIN}${APP_URI}" -a "$APP" \
+        || ynh_die "Path not available: ${DOMAIN}${APP_URI}"
+}
+
+function init_sympa_mysqldb()
+{
+	# Generate random password
+	db_user=sympa
+	db_pwd=$(dd if=/dev/urandom bs=1 count=200 2> /dev/null | tr -c -d '[A-Za-z0-9]' | sed -n 's/\(.\{24\}\).*/\1/p')
+
+	# Initialize database and store mysql password for upgrade
+    # FIXME
+	sudo yunohost app initdb $db_user -p $db_pwd || echo "FIXME: Database already exists"
+	sudo yunohost app setting $APP mysqlpassword -v $db_pwd
+
+}
+
+function install_sympa_dependencies()
+{
+    cd /tmp/
+    sudo apt-get update
+	sudo apt-get install -y automake gettext build-essential libxml-perl libmime-lite-html-perl mhonarc libssl-dev libcrypt-smime-perl libdbd-csv-perl xml-twig-tools
+	echo -e "yes\nq" | sudo cpan Archive::Zip CGI Class::Singleton DateTime::Format::Mail DateTime::TimeZone DBI Digest::MD5 Email::Simple Encode File::Copy::Recursive File::NFSLock HTML::FormatText HTML::StripScripts::Parser HTML::TreeBuilder IO::File IO::Scalar List::Util::XS Locale::Messages LWP::UserAgent Mail::Address MIME::Base64 MIME::Charset MIME::EncWords MIME::Tools Net::CIDR Net::DNS Proc::ProcessTable Template Term::ProgressBar Text::LineFold Time::HiRes URI::Escape MHonArc::UTF8 AuthCAS Clone Crypt::CipherSaber Crypt::OpenSSL::X509 Data::Password Mail::DKIM::Verifier Net::LDAP SOAP::Lite | tee sympa-cpan-deps-install.log | grep "Running install for module"
+}
+
+function install_sympa_from_sources()
+{
+   cd /home/sympa/$SYMPA_VERSION
+   wget http://www.sympa.org/distribution/$SYMPA_VERSION.tar.gz
+   tar -xvf $SYMPA_VERSION.tar.gz
+
+   sudo adduser --disabled-login --gecos Sympa sympa
+
+   ./configure --enable-fhs
+   make
+   sudo make install
+}
+
+function configure_nginx_and_ssowat()
+{
+    # Modify Nginx configuration file and copy it to Nginx conf directory
+    sed -i "s@YNH_WWW_PATH@$APP_URI@g" $NGINX_CONF_TEMPLATE
+    sed -i "s@YNH_WWW_ALIAS@$APP_INSTALL_PATH/@g" $NGINX_CONF_TEMPLATE
+    sudo cp $NGINX_CONF_TEMPLATE /etc/nginx/conf.d/$DOMAIN.d/$APP.conf
+
+    # If app is public, add url to SSOWat conf as skipped_uris
+    if [[ $APP_IS_PUBLIC -eq 1 ]]; then
+        # unprotected_uris allows SSO credentials to be passed anyway.
+        ynh_app_setting_set "$APP" unprotected_uris "/"
+    fi
+
+    sudo service nginx reload
+}
+
+echo "DEBUG : initializing sympa db"
+init_sympa_mysqldb
+echo "DEBUG : installing sympa dependencies"
+install_sympa_dependencies
+echo "DEBUG : installing sympa from sources"
+install_sympa_from_sources
+
+
