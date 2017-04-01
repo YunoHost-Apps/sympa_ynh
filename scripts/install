@@ -17,12 +17,13 @@ readonly NGINX_CONF_TEMPLATE="$PWD/../conf/nginx.conf"
 source /usr/share/yunohost/helpers
 
 readonly SYMPA_VERSION="sympa-6.2.16"
+readonly TMP_DIR="/tmp/sympa-install"
+readonly TMP_DIR_SYMPA_VERSION="$TMP_DIR/$SYMPA_VERSION"
 
 function configure_app()
 {
     # Save app settings
     ynh_app_setting_set "$APP" admin     "$APP_ADMIN"
-    ynh_app_setting_set "$APP" is_public "$APP_IS_PUBLIC"
     ynh_app_setting_set "$APP" language  "$APP_LANGUAGE"
 
     # Check domain/path availability
@@ -32,81 +33,94 @@ function configure_app()
 
 function init_sympa_mysqldb()
 {
-	# Generate random password
-	db_user=sympa
+    # Generate random password
+    db_user=sympa
     db_pwd=$(ynh_string_random)
 
-	# Initialize database and store mysql password for upgrade
+    # Initialize database and store mysql password for upgrade
     # FIXME
-	sudo yunohost app initdb $db_user -p $db_pwd || echo "FIXME: Database already exists"
-	ynh_app_setting_set "$APP" mysqlpassword     "$db_pwd"
+    sudo yunohost app initdb $db_user -p $db_pwd || echo "FIXME: Database already exists"
+    ynh_app_setting_set "$APP" mysqlpassword     "$db_pwd"
 
 }
 
 function install_sympa_dependencies()
 {
     sudo apt-get update
-	sudo apt-get install -y \
-        build-essential libxml-perl libmime-lite-html-perl mhonarc libssl-dev \
-        libcrypt-smime-perl libdbd-csv-perl xml-twig-tools libxml2-dev \
-        libsoap-lite-perl libdbi-perl libarchive-zip-perl libmailtools-perl \
-        libmsgcat-perl libmime-tools-perl libio-stringy-perl libnet-ldap-perl \
-        libcgi-fast-perl libintl-perl libmime-charset-perl libmime-encwords-perl \
-        libtemplate-perl libxml-libxml-perl libcgi-pm-perl \
-        libhtml-stripscripts-parser-perl libhtml-tree-perl libhtml-format-perl \
-        mhonarc libregexp-common-perl libclass-singleton-perl \
-        libdatetime-format-mail-perl libdatetime-timezone-perl libdbi-perl \
-        libemail-simple-perl libencode-perl libfile-copy-recursive-perl \
-        libfile-nfslock-perl libhtml-stripscripts-parser-perl \
-        libmime-charset-perl libmime-encwords-perl libmime-tools-perl \
-        libnet-cidr-perl libnet-dns-perl libproc-processtable-perl \
-        libtemplate-perl libterm-progressbar-perl libauthcas-perl libclone-perl \
-        libcrypt-ciphersaber-perl libcrypt-openssl-x509-perl \
-        libdata-password-perl libmail-dkim-perl liburi-perl \
-        libunicode-linebreak-perl libmailtools-perl libwww-perl libintl-perl \
-        libscalar-list-utils-perl libio-stringy-perl libhtml-tree-perl \
+    sudo apt-get install -y \
+        build-essential mhonarc xml-twig-tools \
+        libarchive-zip-perl libauthcas-perl libcgi-fast-perl libcgi-pm-perl \
+        libclass-singleton-perl libclone-perl libcrypt-ciphersaber-perl \
+        libcrypt-openssl-x509-perl libcrypt-smime-perl libdata-password-perl \
+        libdatetime-format-mail-perl libdatetime-timezone-perl libdbd-csv-perl \
+        libdbi-perl libemail-simple-perl libencode-perl \
+        libfile-copy-recursive-perl libfile-nfslock-perl libhtml-format-perl \
+        libhtml-stripscripts-parser-perl libhtml-tree-perl libintl-perl \
+        libio-stringy-perl libmail-dkim-perl libmailtools-perl \
+        libmime-charset-perl libmime-encwords-perl libmime-lite-html-perl \
+        libmime-tools-perl libmsgcat-perl libnet-cidr-perl libnet-dns-perl \
+        libnet-ldap-perl libproc-processtable-perl libregexp-common-perl \
+        libscalar-list-utils-perl libsoap-lite-perl libssl-dev libtemplate-perl \
+        libterm-progressbar-perl libunicode-linebreak-perl liburi-perl \
+        libwww-perl libxml2-dev libxml-libxml-perl libxml-perl \
 
-    #CPANDEPENDENCIES="HTML::FormatText"
-    #for DEP in $CPANDEPENDENCIES
-    #do
-    #    echo "Installing CPAN module $DEP ..."
-    #    echo "yes" | sudo cpan -T $DEP >> /tmp/sympa-cpan-deps-install.log 2>&1
-    #done
+    rm -f /tmp/sympa-cpan-deps-install.log
+    CPANDEPENDENCIES="MHonArc::UTF8 MIME::Charset"
+    for DEP in $CPANDEPENDENCIES
+    do
+        echo "Installing CPAN module $DEP ..."
+        echo "yes" | sudo cpan -T $DEP >> /tmp/sympa-cpan-deps-install.log 2>&1
+    done
 }
 
 function install_sympa_from_sources()
 {
-   local INSTALL_DIR="/tmp/sympa-install"
-   # FIXME
+   # Create a user with its home
    sudo adduser --disabled-login --gecos Sympa sympa || true
-   mkdir -p $INSTALL_DIR
-   cd $INSTALL_DIR
+   mkdir -p /home/sympa/
 
+   # We also need a tmp dir to unpack sources...
+   mkdir -p $TMP_DIR
+   cd $TMP_DIR
+
+   # Fetch sources
    wget --quiet http://www.sympa.org/distribution/$SYMPA_VERSION.tar.gz
    tar -xvf $SYMPA_VERSION.tar.gz
-   cd $INSTALL_DIR/$SYMPA_VERSION
+   cd $TMP_DIR_SYMPA_VERSION
 
+   # Configure, make...
    ./configure \
+       --enable-fhs \
        --without-initdir \
        --with-unitsdir=/etc/systemd/system \
        --disable-smtpc
+
    make
 
-   # Hacking DBD CSV version requirement
-   sed -i -e "s/ package_name => 'DBD-CSV',/ package_name => 'DBD-CSV', required_version => '0.45',/g" $INSTALL_DIR/$SYMPA_VERSION/src/lib/Sympa/ModDef.pm
+   # Hack DBD CSV version requirement
+   sed -i -e "s/ package_name => 'DBD-CSV',/ package_name => 'DBD-CSV', required_version => '0.45',/g" $TMP_DIR_SYMPA_VERSION/src/lib/Sympa/ModDef.pm
 
-   sudo make install
-
-   # Hacking sympa wizard to use "Mysql" for the database
-   SYMPA_WIZARD="/home/sympa/sbin/sympa_wizard.pl"
+   # Hack sympa wizard to use "Mysql" for the database and disable some
+   # questions
+   SYMPA_WIZARD="$TMP_DIR_SYMPA_VERSION/src/sbin/sympa_wizard.pl"
    sudo sed -e 's@my \$db_type;@my $db_type = "mysql";@' \
             -e 's@my \$rep = <STDIN>;@\#my $rep = <STDIN>;@' \
             -e 's@foreach my \$mod (sort keys %\$cpan_modules) {@foreach my $mod (sort keys %$cpan_modules) {\n        next if ($mod eq "DBD::Oracle" || $mod eq "DBD::Sybase" || $mod eq "DBD::Pg" || $mod eq "DBD::ODBC" || $mod eq "DBD::SQLite");@'\
             -i $SYMPA_WIZARD
 
    # FIXME : Delete when remove script is correct
+   # Note : it's not clear if the install works without this even when app got
+   # correctly removed right before...
    rm -f /home/sympa/etc/sympa/sympa.conf.bin
 
+
+
+   sudo make install
+
+}
+
+function configure_sympa()
+{
    # Generate random sympa cookie
    sympacookie=$(ynh_string_random)
    sudo yunohost app setting $APP sympacookie -v $sympacookie
@@ -121,11 +135,12 @@ function install_sympa_from_sources()
        db_user=$db_user \
        db_passwd=$db_pwd \
        cookie=$sympacookie
+}
 
-    sudo systemctl daemon-reload
-    sudo systemctl enable sympa.service
-    sudo systemctl start sympa.service
-
+function configure_postfix()
+{
+    # TODO
+    echo "Todo"
 }
 
 function configure_nginx_and_ssowat()
@@ -144,11 +159,18 @@ function configure_nginx_and_ssowat()
     sudo service nginx reload
 }
 
-echo "DEBUG : initializing sympa db"
+function start_sympa()
+{
+   sudo systemctl daemon-reload
+   sudo systemctl enable sympa.service
+   sudo systemctl start sympa.service
+}
+
+configure_app
 init_sympa_mysqldb
-echo "DEBUG : installing sympa dependencies"
 install_sympa_dependencies
-echo "DEBUG : installing sympa from sources"
 install_sympa_from_sources
-
-
+configure_sympa
+#configure_postfix
+#configure_nginx_and_ssowat
+start_sympa
