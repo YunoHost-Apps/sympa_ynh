@@ -1,17 +1,31 @@
 #!/bin/bash
 set -u
 
-# See comments in install script
-app=$YNH_APP_INSTANCE_NAME
-
 # Source YunoHost helpers
 source /usr/share/yunohost/helpers
 
 # Retrieve app settings
-#domain=$(ynh_app_setting_get "$app" domain)
+app=$YNH_APP_INSTANCE_NAME
+domain=$(ynh_app_setting_get "$app" domain)
 
-# Remove sources
-#sudo rm -rf /var/www/$app
+
+# FIXME FIXME FIXME
+# Add tests that stuff actually exists before removing them
+
+
+# Remove systemd services
+cd /etc/systemd/system/
+systemctl disable sympa.service
+rm sympa*
+systemctl daemon-reload
+
+# Remove home dir / install dir
+install_dir="/home/sympa"
+rm -rf $install_dir
+
+# Remove mysql table
+ynh_mysql_drop_user sympa
+ynh_mysql_drop_db sympa
 
 # Remove nginx configuration file
 #sudo rm -f /etc/nginx/conf.d/$domain.d/$app.conf
