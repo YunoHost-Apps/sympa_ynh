@@ -15,6 +15,11 @@ Attempt to package Sympa for Yunohost....
 - [X] Nginx configuration (cf. proposition from Julien on pad ?)
 - [ ] Make sure remove script remove everyting that needs to be removed
 
+#### Tests
+
+- [ ] Test that creating a mailing list and sending mail actually works...
+- [ ] Test install on an Internet Cube or Raspberry Pi
+
 #### Important features
 
 - [ ] LDAP integration (!!)
