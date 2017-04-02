@@ -140,7 +140,8 @@ function configure_sympa()
        db_user=$db_user \
        db_passwd=$db_pwd \
        cookie=$sympacookie \
-       static_content_url=/sympa/static
+       static_content_url=/sympa/static \
+       lang=$APP_LANGUAGE
 
    sudo systemctl daemon-reload
    sudo systemctl enable sympa.service
