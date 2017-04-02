@@ -8,10 +8,8 @@ source /usr/share/yunohost/helpers
 app=$YNH_APP_INSTANCE_NAME
 domain=$(ynh_app_setting_get "$app" domain)
 
-
 # FIXME FIXME FIXME
 # Add tests that stuff actually exists before removing them
-
 
 # Remove systemd services
 cd /etc/systemd/system/

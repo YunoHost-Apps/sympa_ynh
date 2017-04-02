@@ -12,6 +12,8 @@ readonly APP_LANGUAGE=$YNH_APP_ARG_LANGUAGE
 
 readonly APP_INSTALL_PATH="/var/www/sympa"
 readonly NGINX_CONF_TEMPLATE="$PWD/../conf/nginx.conf"
+readonly SYMPA_REGEN_CONF_HOOK="$PWD/../hooks/100-sympa"
+readonly SYMPA_GENERAL_ALIASES="$PWD/../conf/sympa_general_aliases"
 
 # Source YunoHost helpers
 source /usr/share/yunohost/helpers
@@ -85,7 +87,7 @@ function install_sympa_from_sources()
 
    # Fetch sources
    wget --quiet http://www.sympa.org/distribution/$SYMPA_VERSION.tar.gz
-   tar -xvf $SYMPA_VERSION.tar.gz
+   tar -xf $SYMPA_VERSION.tar.gz
    cd $TMP_DIR_SYMPA_VERSION
 
    # Configure, make...
@@ -95,7 +97,7 @@ function install_sympa_from_sources()
        --with-unitsdir=/etc/systemd/system \
        --disable-smtpc
 
-   make
+   make > make.log 2>&1
 
    # Hack DBD CSV version requirement
    sed -i -e "s/ package_name => 'DBD-CSV',/ package_name => 'DBD-CSV', required_version => '0.45',/g" $TMP_DIR_SYMPA_VERSION/src/lib/Sympa/ModDef.pm
@@ -113,9 +115,7 @@ function install_sympa_from_sources()
    # correctly removed right before...
    rm -f /home/sympa/etc/sympa/sympa.conf.bin
 
-
-
-   sudo make install
+   sudo make install > makeinstall.log 2>&1
 
 }
 
@@ -135,12 +135,21 @@ function configure_sympa()
        db_user=$db_user \
        db_passwd=$db_pwd \
        cookie=$sympacookie
+   
+   sudo systemctl daemon-reload
+   sudo systemctl enable sympa.service
 }
 
 function configure_postfix()
 {
-    # TODO
-    echo "Todo"
+    # FIXME - feels weird that this folder has to be created ???
+    mkdir -p /etc/mail/
+    cp $SYMPA_GENERAL_ALIASES /etc/mail/sympa_general_aliases
+    postmap /etc/mail/sympa_general_aliases
+    
+    # Add postfix conf hook
+    cp $SYMPA_REGEN_CONF_HOOK /usr/share/yunohost/hooks/conf_regen/
+    yunohost service regen-conf postfix
 }
 
 function configure_nginx_and_ssowat()
@@ -159,18 +168,12 @@ function configure_nginx_and_ssowat()
     sudo service nginx reload
 }
 
-function start_sympa()
-{
-   sudo systemctl daemon-reload
-   sudo systemctl enable sympa.service
-   sudo systemctl start sympa.service
-}
 
 configure_app
 init_sympa_mysqldb
 install_sympa_dependencies
 install_sympa_from_sources
 configure_sympa
-#configure_postfix
+configure_postfix
 #configure_nginx_and_ssowat
-start_sympa
+
