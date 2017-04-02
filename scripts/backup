@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Exit on command errors and treat unset variables as an error
+set -eu
+
+# See comments in install script
+app=$YNH_APP_INSTANCE_NAME
+
+# Source YunoHost helpers
+source /usr/share/yunohost/helpers
+
+# Backup sources & data
+# Note: the last argument is where to save this path, see the restore script.
+ynh_backup "/home/sympa/" "sources_and_data"
+
+# Backup database
+ynh_mysql_dump_db 'sympa' > /tmp/sympa.dump.sql
+ynh_backup "/tmp/sympa.dump.sql" "sympa.dump.sql"
+rm /tmp/sympa.dump.sql
+
+# Backup mail aliases
+ynh_backup "/etc/mail/" "mail_aliases"
+
+# Backup systemd services
+mkdir /tmp/sympa.services
+cp /etc/systemd/systemd/sympa* /tmp/sympa.services
+ynh_backup "/tmp/sympa.services" "sympa.services"
+
+# Copy NGINX configuration
+domain=$(ynh_app_setting_get "$app" domain)
+ynh_backup "/etc/nginx/conf.d/${domain}.d/${app}.conf" "nginx.conf"
