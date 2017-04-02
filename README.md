@@ -4,7 +4,7 @@ Attempt to package Sympa for Yunohost....
 
 :warning: THIS IS UNDER HEAVY DEVELOPMENT. DO NO INSTALL IN PRODUCTION :warning:
 
-## To-do
+## To-do / roadmap
 
 #### Basic install/remove
 
