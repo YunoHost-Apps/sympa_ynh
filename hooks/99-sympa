@@ -1,0 +1,55 @@
+#!/bin/bash
+
+set -e
+
+do_pre_regen() {
+  pending_dir=$1
+
+  # Regen ldap conf
+  auth_conf_template="/usr/share/yunohost/templates/sympa/ldap.conf"
+  auth_conf="${pending_dir}/home/sympa/etc/auth.conf"
+  
+  mkdir -p ${pending_dir}/home/sympa/etc/
+  cp $auth_conf_template $auth_conf
+  
+  domain_list=$(sudo yunohost domain list --output-as plain --quiet)
+  ldap_regex=""
+
+  for domain in $domain_list; do
+    domain_escape_dots=$(echo $domain | sed 's!\.!\\\.!g')
+    ldap_regex="$ldap_regex|.*@$domain_escape_dots"
+  done
+
+  # (remove first '|')
+  ldap_regex=${ldap_regex#"|"}
+ 
+  sed -i "s!__DOMAIN_LIST__!$ldap_regex!g" $auth_conf 
+ 
+}
+
+do_post_regen() {
+
+  regen_conf_files=$1
+  
+  sudo systemctl restart sympa-fcgi.service
+  sudo systemctl restart sympa.service
+}
+
+FORCE=${2:-0}
+DRY_RUN=${3:-0}
+
+case "$1" in
+  pre)
+    do_pre_regen $4
+    ;;
+  post)
+    do_post_regen $4
+    ;;
+  *)
+    echo "hook called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+exit 0
+

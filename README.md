@@ -22,17 +22,15 @@ Attempt to package Sympa for Yunohost....
 
 #### Important features
 
-- [ ] LDAP integration (!!)
-- [ ] Have a clean package
-     - [ ] Use proper helpers
-     - [ ] (Bonus quest) Be level 7 lol
+- [X] LDAP integration (!!)
 - [X] Language / locale management
-- [ ] Public / private option in manifest
+- [ ] SSO integration (auto login in Sympa when logged in the SSO..)
 - [ ] Check DKIM / DMARC ? (cf. [this doc](https://www.sympa.org/doc/formation/sympa_avance))
 
-#### Moar scripts
+#### Moar scripts / improvements
 
+- [ ] Public / private option in manifest (should be easy to do)
+- [ ] Use proper helpers
 - [ ] Backup / restore
-    - [ ] Probably need to think about what we want to backup exactly
 - [ ] Upgrade
-- [ ] (Change url)
+- [ ] (Bonus quest) Be level >= 7 lol

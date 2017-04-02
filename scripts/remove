@@ -14,7 +14,13 @@ DOMAIN=$(ynh_app_setting_get "$APP" domain)
 # Remove nginx configuration file
 sudo rm -f /etc/nginx/conf.d/$DOMAIN.d/$APP.conf
 
-# Remove systemd services
+# Remove yunohost custom hooks
+rm /usr/share/yunohost/hooks/conf_regen/98-postfix_sympa
+rm /usr/share/yunohost/hooks/conf_regen/99-sympa
+
+# Remove sympa services
+yunohost service remove sympa
+
 cd /etc/systemd/system/
 systemctl disable sympa.service
 systemctl disable sympa-fcgi.service
