@@ -9,14 +9,19 @@ readonly DOMAIN=$YNH_APP_ARG_DOMAIN
 readonly APP_URI=$YNH_APP_ARG_PATH
 readonly APP_ADMIN=$YNH_APP_ARG_ADMIN
 readonly APP_LANGUAGE=$YNH_APP_ARG_LANGUAGE
+readonly APP_IS_PUBLIC="1"
 
-readonly APP_INSTALL_PATH="/var/www/sympa"
 readonly NGINX_CONF_TEMPLATE="$PWD/../conf/nginx.conf"
-readonly SYMPA_REGEN_CONF_HOOK="$PWD/../hooks/100-sympa"
+readonly SYMPA_REGEN_CONF_HOOK="$PWD/../hooks/99-postfix_sympa"
 readonly SYMPA_GENERAL_ALIASES="$PWD/../conf/sympa_general_aliases"
+readonly SYMPA_FCGI_SERVICE_TEMPLATE="$PWD/../conf/sympa-fcgi.service"
+readonly SYMPA_HOME="/home/sympa"
+
 
 # Source YunoHost helpers
 source /usr/share/yunohost/helpers
+
+readonly SYMPA_FCGI_PORT=$(ynh_find_port 8442)
 
 readonly SYMPA_VERSION="sympa-6.2.16"
 readonly TMP_DIR="/tmp/sympa-install"
@@ -79,7 +84,7 @@ function install_sympa_from_sources()
 {
    # Create a user with its home
    sudo adduser --disabled-login --gecos Sympa sympa || true
-   mkdir -p /home/sympa/
+   mkdir -p $SYMPA_HOME
 
    # We also need a tmp dir to unpack sources...
    mkdir -p $TMP_DIR
@@ -113,7 +118,7 @@ function install_sympa_from_sources()
    # FIXME : Delete when remove script is correct
    # Note : it's not clear if the install works without this even when app got
    # correctly removed right before...
-   rm -f /home/sympa/etc/sympa/sympa.conf.bin
+   rm -f $SYMPA_HOME/etc/sympa/sympa.conf.bin
 
    sudo make install > makeinstall.log 2>&1
 
@@ -134,8 +139,9 @@ function configure_sympa()
        db_host=localhost \
        db_user=$db_user \
        db_passwd=$db_pwd \
-       cookie=$sympacookie
-   
+       cookie=$sympacookie \
+       static_content_url=/sympa/static
+
    sudo systemctl daemon-reload
    sudo systemctl enable sympa.service
 }
@@ -146,17 +152,31 @@ function configure_postfix()
     mkdir -p /etc/mail/
     cp $SYMPA_GENERAL_ALIASES /etc/mail/sympa_general_aliases
     postmap /etc/mail/sympa_general_aliases
-    
+
     # Add postfix conf hook
     cp $SYMPA_REGEN_CONF_HOOK /usr/share/yunohost/hooks/conf_regen/
     yunohost service regen-conf postfix
 }
 
+function install_fcgi_service()
+{
+    sudo apt-get install -y spawn-fcgi
+    sed -i "s@__SYMPA_PORT__@$SYMPA_FCGI_PORT@g" $SYMPA_FCGI_SERVICE_TEMPLATE
+    sed -i "s@__SYMPA_HOME__@$SYMPA_HOME@g" $SYMPA_FCGI_SERVICE_TEMPLATE
+    sudo cp $SYMPA_FCGI_SERVICE_TEMPLATE /etc/systemd/system/sympa-fcgi.service
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable sympa-fcgi.service
+    sudo systemctl start sympa-fcgi.service
+}
+
 function configure_nginx_and_ssowat()
 {
     # Modify Nginx configuration file and copy it to Nginx conf directory
-    sed -i "s@YNH_WWW_PATH@$APP_URI@g" $NGINX_CONF_TEMPLATE
-    sed -i "s@YNH_WWW_ALIAS@$APP_INSTALL_PATH/@g" $NGINX_CONF_TEMPLATE
+    sed -i "s@__SYMPA_WEBPATH__@$APP_URI@g" $NGINX_CONF_TEMPLATE
+    sed -i "s@__SYMPA_HOME__@$SYMPA_HOME@g" $NGINX_CONF_TEMPLATE
+    sed -i "s@__SYMPA_PORT__@$SYMPA_FCGI_PORT@g" $NGINX_CONF_TEMPLATE
+
     sudo cp $NGINX_CONF_TEMPLATE /etc/nginx/conf.d/$DOMAIN.d/$APP.conf
 
     # If app is public, add url to SSOWat conf as skipped_uris
@@ -166,6 +186,7 @@ function configure_nginx_and_ssowat()
     fi
 
     sudo service nginx reload
+
 }
 
 
@@ -175,5 +196,6 @@ install_sympa_dependencies
 install_sympa_from_sources
 configure_sympa
 configure_postfix
-#configure_nginx_and_ssowat
+install_fcgi_service
+configure_nginx_and_ssowat
 

@@ -5,15 +5,19 @@ set -u
 source /usr/share/yunohost/helpers
 
 # Retrieve app settings
-app=$YNH_APP_INSTANCE_NAME
-domain=$(ynh_app_setting_get "$app" domain)
+APP=$YNH_APP_INSTANCE_NAME
+DOMAIN=$(ynh_app_setting_get "$APP" domain)
 
 # FIXME FIXME FIXME
 # Add tests that stuff actually exists before removing them
 
+# Remove nginx configuration file
+sudo rm -f /etc/nginx/conf.d/$DOMAIN.d/$APP.conf
+
 # Remove systemd services
 cd /etc/systemd/system/
 systemctl disable sympa.service
+systemctl disable sympa-fcgi.service
 rm sympa*
 systemctl daemon-reload
 
@@ -25,8 +29,5 @@ rm -rf $install_dir
 ynh_mysql_drop_user sympa
 ynh_mysql_drop_db sympa
 
-# Remove nginx configuration file
-#sudo rm -f /etc/nginx/conf.d/$domain.d/$app.conf
-
 # Reload nginx service
-#sudo service nginx reload
+sudo service nginx reload
