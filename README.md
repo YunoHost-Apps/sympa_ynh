@@ -26,7 +26,7 @@ Attempt to package Sympa for Yunohost....
 - [ ] Have a clean package
      - [ ] Use proper helpers
      - [ ] (Bonus quest) Be level 7 lol
-- [ ] Language / locale management
+- [X] Language / locale management
 - [ ] Public / private option in manifest
 - [ ] Check DKIM / DMARC ? (cf. [this doc](https://www.sympa.org/doc/formation/sympa_avance))
 
