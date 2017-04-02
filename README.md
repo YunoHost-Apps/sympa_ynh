@@ -11,10 +11,9 @@ Attempt to package Sympa for Yunohost....
 - [X] Understand and install dependencies
 - [X] Undertsand and install sources 
 - [X] Configure sympa (at least the wizard part looks okay)
-- [ ] Properly handle postfix configuration (using hooks on regen-conf postfix ?)
-- [ ] Nginx configuration (cf. proposition from Julien on pad ?)
-- [ ] (Configure sympa : web part ? Don't even know what's supposed to happen there)
-    - [ ] Probably need to think about which default values we want
+- [X] Properly handle postfix configuration (using hooks on regen-conf postfix ?)
+- [X] Nginx configuration (cf. proposition from Julien on pad ?)
+- [ ] Make sure remove script remove everyting that needs to be removed
 
 #### Important features
 
