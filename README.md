@@ -34,3 +34,7 @@ Attempt to package Sympa for Yunohost....
 - [ ] Backup / restore
 - [ ] Upgrade
 - [ ] (Bonus quest) Be level >= 7 lol
+
+## Special thanks
+
+Many thanks to framasky, fmenade, ljf and the Sympa team for their help during the [Sympa hackaton in April 2017](https://framablog.org/2017/03/30/un-hackathon-pour-sympa/) !
