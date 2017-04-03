@@ -1,8 +1,16 @@
 # Sympa for Yunohost
 
-Attempt to package Sympa for Yunohost....
+![](http://www.sympa.org/_media/logo_sympa.png)
 
-:warning: THIS IS UNDER HEAVY DEVELOPMENT. DO NO INSTALL IN PRODUCTION :warning:
+**Sympa is a mailing-list manager**
+
+[Example of live interface](https://listes.renater.fr/sympa/info/noustestons)
+
+
+
+## Status
+
+:warning: THIS APP IS UNDER HEAVY DEVELOPMENT. DO NO INSTALL IN PRODUCTION :warning:
 
 ## To-do / roadmap
 
