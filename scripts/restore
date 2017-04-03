@@ -14,30 +14,66 @@ source /usr/share/yunohost/helpers
 
 # Retrieve old app settings
 domain=$(ynh_app_setting_get "$app" domain)
+readonly APP_IS_PUBLIC=1
+readonly SYMPA_HOME="/home/sympa/"
 
 # Check domain/path availability
 sudo yunohost app checkurl "${domain}${path_url}" -a "$app" \
     || ynh_die "Path not available: ${domain}${path_url}"
 
+# Install dependencies
+install_sympa_dependencies
+
+# Restore the database
+init_sympa_mysqldb
+ynh_mysql_execute_file_as_root sympa.dump.sql sympa
+
+# Create a user with its home
+sudo adduser --disabled-login --gecos Sympa sympa || true
+mkdir -p $SYMPA_HOME
+
 # Restore sources & data
-src_path="/home/sympa/"
-sudo cp -a ./sources_and_data "$src_path"
+sudo cp -a ./sources "$SYMPA_HOME"
 
 # Restore permissions to app files
 # you may need to make some file and/or directory writeable by www-data (nginx user)
-sudo chown -R sympa: "$src_path"
+sudo chown -R sympa: "$SYMPA_HOME"
 
-# Restore the database
-ynh_mysql_execute_file_as_root sympa.dump.sql sympa
+# Restore hooks
+mkdir -p /usr/share/yunohost/templates/sympa/
+cp ./conf/ldap.conf /usr/share/yunohost/templates/sympa/
+cp -R ./hooks/conf_regen /etc/yunohost/hooks.d/
 
-# Restore systemd files
-sudo cp sympa.services/* /etc/systemd/system/
+# Restore Postfix 
+mkdir -p /etc/mail/
+sudo cp ./mail_aliases/sympa_general_aliases /etc/mail/sympa_general_aliases
+postmap /etc/mail/sympa_general_aliases
+yunohost service regen-conf postfix
+
+
+# Restore systemd
+sudo cp ./services/* /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable sympa.service
 sudo systemctl restart sympa.service
+sudo systemctl enable sympa-fcgi.service
+sudo systemctl restart sympa-fcgi.service
+yunohost service add sympa
+
+# Start sympa
+yunohost service regen-conf sympa --verbose --debug
 
 # Restore NGINX configuration
 sudo cp -a ./nginx.conf "/etc/nginx/conf.d/${domain}.d/${app}.conf"
 
+# SSO
+# If app is public, add url to SSOWat conf as skipped_uris
+if [[ $APP_IS_PUBLIC -eq 1 ]]; then
+    # unprotected_uris allows SSO credentials to be passed anyway.
+    ynh_app_setting_set "$app" unprotected_uris "/"
+fi
+
 # Restart webserver
 sudo service nginx reload
+
+

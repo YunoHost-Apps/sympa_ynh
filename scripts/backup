@@ -11,18 +11,21 @@ source /usr/share/yunohost/helpers
 
 # Backup sources & data
 # Note: the last argument is where to save this path, see the restore script.
-ynh_backup "/home/sympa/" "sources_and_data"
+ynh_backup "/home/sympa/" "sources"
 
 # Backup database
 ynh_mysql_dump_db 'sympa' > ./sympa.dump.sql
 
 # Backup mail aliases
-ynh_backup "/etc/mail/" "mail_aliases"
+ynh_backup "/etc/mail/sympa_general_aliases" "conf/sympa_general_aliases"
 
 # Backup systemd services
-mkdir /tmp/sympa.services
-cp /etc/systemd/systemd/sympa* ./sympa.services
+ynh_backup "/etc/systemd/systemd/sympa*" "services/"
+
+ynh_backup "/usr/share/yunohost/templates/sympa/ldap.conf" "conf/ldap.conf"
+ynh_backup "/etc/yunohost/hooks.d/conf_regen/98-postfix-sympa" "hooks/conf_regen/98-postfix-sympa"
+ynh_backup "/etc/yunohost/hooks.d/conf_regen/99-sympa" "hooks/conf_regen/99-sympa"
 
 # Copy NGINX configuration
 domain=$(ynh_app_setting_get "$app" domain)
-ynh_backup "/etc/nginx/conf.d/${domain}.d/${app}.conf" "nginx.conf"
+ynh_backup "/etc/nginx/conf.d/${domain}.d/${app}.conf" "conf/nginx.conf"
