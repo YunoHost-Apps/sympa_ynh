@@ -1,0 +1,5 @@
+SOURCE_URL=http://www.sympa.org/distribution/sympa-6.2.16.tar.gz
+SOURCE_FILENAME=sympa-6.2.16.tar.gz
+SOURCE_FORMAT=tar.gz
+SOURCE_SUM=cc9dea56afc159ef3bacf6c9b09ae338
+SOURCE_SUM_PRG=md5sum

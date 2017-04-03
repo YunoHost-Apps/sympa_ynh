@@ -14,17 +14,14 @@ source /usr/share/yunohost/helpers
 ynh_backup "/home/sympa/" "sources_and_data"
 
 # Backup database
-ynh_mysql_dump_db 'sympa' > /tmp/sympa.dump.sql
-ynh_backup "/tmp/sympa.dump.sql" "sympa.dump.sql"
-rm /tmp/sympa.dump.sql
+ynh_mysql_dump_db 'sympa' > ./sympa.dump.sql
 
 # Backup mail aliases
 ynh_backup "/etc/mail/" "mail_aliases"
 
 # Backup systemd services
 mkdir /tmp/sympa.services
-cp /etc/systemd/systemd/sympa* /tmp/sympa.services
-ynh_backup "/tmp/sympa.services" "sympa.services"
+cp /etc/systemd/systemd/sympa* ./sympa.services
 
 # Copy NGINX configuration
 domain=$(ynh_app_setting_get "$app" domain)

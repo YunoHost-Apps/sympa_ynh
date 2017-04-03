@@ -3,6 +3,8 @@ set -u
 
 # Source YunoHost helpers
 source /usr/share/yunohost/helpers
+source future.sh
+source common.sh
 
 # Retrieve app settings
 APP=$YNH_APP_INSTANCE_NAME
@@ -11,12 +13,19 @@ DOMAIN=$(ynh_app_setting_get "$APP" domain)
 # FIXME FIXME FIXME
 # Add tests that stuff actually exists before removing them
 
+# Remove mysql table
+ynh_mysql_drop_user sympa
+ynh_mysql_drop_db sympa
+
+# Remove dependencies
+ynh_remove_app_dependencies
+
 # Remove nginx configuration file
 sudo rm -f /etc/nginx/conf.d/$DOMAIN.d/$APP.conf
 
 # Remove yunohost custom hooks
-rm /usr/share/yunohost/hooks/conf_regen/98-postfix_sympa
-rm /usr/share/yunohost/hooks/conf_regen/99-sympa
+rm /etc/yunohost/hooks.d/conf_regen/98-postfix_sympa
+rm /etc/yunohost/hooks.d/conf_regen/99-sympa
 
 # Remove sympa services
 yunohost service remove sympa
@@ -29,11 +38,10 @@ systemctl daemon-reload
 
 # Remove home dir / install dir
 install_dir="/home/sympa"
-rm -rf $install_dir
+ynh_secure_remove $install_dir
 
-# Remove mysql table
-ynh_mysql_drop_user sympa
-ynh_mysql_drop_db sympa
+# Delete system user
+ynh_system_user_delete sympa
 
 # Reload nginx service
 sudo service nginx reload

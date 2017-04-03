@@ -1,0 +1,38 @@
+diff -Naur a/src/lib/Sympa/ModDef.pm b/src/lib/Sympa/ModDef.pm
+--- a/src/lib/Sympa/ModDef.pm	2016-06-17 16:38:08.000000000 +0200
++++ b/src/lib/Sympa/ModDef.pm	2017-04-03 09:33:53.680040669 +0200
+@@ -99,6 +99,7 @@
+         'gettext_id'     => 'used to decode date and time in message headers',
+     },
+     'DBD::CSV' => {
++        required_version => '0.45',
+         package_name => 'DBD-CSV',
+         'gettext_id' =>
+             'CSV database driver, required if you include list members, owners or editors from CSV file.',
+diff -Naur a/src/sbin/sympa_wizard.pl.in b/src/sbin/sympa_wizard.pl.in
+--- a/src/sbin/sympa_wizard.pl.in	2016-06-07 11:12:21.000000000 +0200
++++ b/src/sbin/sympa_wizard.pl.in	2017-04-03 09:37:58.324047221 +0200
+@@ -439,12 +439,12 @@
+ ##############################################################################
+ Press the Enter key to continue..."
+     ) . "\n";
+-    my $rep = <STDIN>;
++    #my $rep = <STDIN>;
+ 
+     print "\n";
+ 
+     # Choose default DBD module if it has not been defined.
+-    my $db_type;
++    my $db_type = "mysql";
+     if (open my $fh, '<', $sympa_conf) {
+         foreach my $line (<$fh>) {
+             if ($line =~ /\Adb_type\s+(\S*)/) {
+@@ -524,6 +524,8 @@
+ 
+     foreach my $mod (sort keys %$cpan_modules) {
+ 
++        next if ($mod eq "DBD::Oracle" || $mod eq "DBD::Sybase" || $mod eq "DBD::Pg" || $mod eq "DBD::ODBC" || $mod eq "DBD::SQLite");
++
+         ## Only check modules of the expected type
+         if ($type eq 'mandatory') {
+             next unless ($cpan_modules->{$mod}{mandatory});

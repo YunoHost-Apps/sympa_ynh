@@ -12,7 +12,7 @@ readonly APP_LANGUAGE=$YNH_APP_ARG_LANGUAGE
 readonly APP_IS_PUBLIC="1"
 
 readonly NGINX_CONF_TEMPLATE="$PWD/../conf/nginx.conf"
-readonly SYMPA_REGEN_CONF_HOOK="$PWD/../hooks/99-sympa"
+readonly REGEN_CONF_HOOK="$PWD/../hooks/conf_regen"
 readonly SYMPA_POSTFIX_REGEN_CONF_HOOK="$PWD/../hooks/98-postfix_sympa"
 readonly SYMPA_GENERAL_ALIASES="$PWD/../conf/sympa_general_aliases"
 readonly SYMPA_FCGI_SERVICE_TEMPLATE="$PWD/../conf/sympa-fcgi.service"
@@ -21,12 +21,13 @@ readonly SYMPA_LDAP_TEMPLATE="$PWD/../conf/ldap.conf"
 
 # Source YunoHost helpers
 source /usr/share/yunohost/helpers
+source future.sh
+source common.sh
 
 readonly SYMPA_FCGI_PORT=$(ynh_find_port 8442)
 
 readonly SYMPA_VERSION="sympa-6.2.16"
 readonly TMP_DIR="/tmp/sympa-install"
-readonly TMP_DIR_SYMPA_VERSION="$TMP_DIR/$SYMPA_VERSION"
 
 function configure_app()
 {
@@ -42,20 +43,19 @@ function configure_app()
 function init_sympa_mysqldb()
 {
     # Generate random password
+    db_name=sympa
     db_user=sympa
     db_pwd=$(ynh_string_random)
 
     # Initialize database and store mysql password for upgrade
-    # FIXME
-    sudo yunohost app initdb $db_user -p $db_pwd || echo "FIXME: Database already exists"
+    ynh_mysql_create_db $db_name $db_user $db_pwd
     ynh_app_setting_set "$APP" mysqlpassword     "$db_pwd"
 
 }
 
 function install_sympa_dependencies()
 {
-    sudo apt-get update
-    sudo apt-get install -y \
+    ynh_install_app_dependencies \
         build-essential mhonarc xml-twig-tools \
         libarchive-zip-perl libauthcas-perl libcgi-fast-perl libcgi-pm-perl \
         libclass-singleton-perl libclone-perl libcrypt-ciphersaber-perl \
@@ -86,15 +86,10 @@ function install_sympa_from_sources()
    # Create a user with its home
    sudo adduser --disabled-login --gecos Sympa sympa || true
    mkdir -p $SYMPA_HOME
-
-   # We also need a tmp dir to unpack sources...
-   mkdir -p $TMP_DIR
+   
+   # Download, check integrity and unpack
+   ynh_setup_source $TMP_DIR
    cd $TMP_DIR
-
-   # Fetch sources
-   wget --quiet http://www.sympa.org/distribution/$SYMPA_VERSION.tar.gz
-   tar -xf $SYMPA_VERSION.tar.gz
-   cd $TMP_DIR_SYMPA_VERSION
 
    # Configure, make...
    ./configure \
@@ -105,27 +100,13 @@ function install_sympa_from_sources()
 
    make > make.log 2>&1
 
-   # Hack DBD CSV version requirement
-   sed -i -e "s/ package_name => 'DBD-CSV',/ package_name => 'DBD-CSV', required_version => '0.45',/g" $TMP_DIR_SYMPA_VERSION/src/lib/Sympa/ModDef.pm
-
-   # Hack sympa wizard to use "Mysql" for the database and disable some
-   # questions
-   SYMPA_WIZARD="$TMP_DIR_SYMPA_VERSION/src/sbin/sympa_wizard.pl"
-   sudo sed -e 's@my \$db_type;@my $db_type = "mysql";@' \
-            -e 's@my \$rep = <STDIN>;@\#my $rep = <STDIN>;@' \
-            -e 's@foreach my \$mod (sort keys %\$cpan_modules) {@foreach my $mod (sort keys %$cpan_modules) {\n        next if ($mod eq "DBD::Oracle" || $mod eq "DBD::Sybase" || $mod eq "DBD::Pg" || $mod eq "DBD::ODBC" || $mod eq "DBD::SQLite");@'\
-            -i $SYMPA_WIZARD
-
    sudo make install > makeinstall.log 2>&1
 
    # LDAP part
    # (not sure at which point of the script to do this)
    mkdir -p /usr/share/yunohost/templates/sympa/ 
    cp $SYMPA_LDAP_TEMPLATE /usr/share/yunohost/templates/sympa/
-   
-   # General hook to regen conf (mainly for LDAP at the moment)
-   cp $SYMPA_REGEN_CONF_HOOK /usr/share/yunohost/hooks/conf_regen/
-
+   cp -R $REGEN_CONF_HOOK /etc/yunohost/hooks.d/
 }
 
 function configure_sympa()
@@ -139,6 +120,7 @@ function configure_sympa()
    # correctly removed right before...
    rm -f $SYMPA_HOME/etc/sympa/sympa.conf.bin
 
+   SYMPA_WIZARD="$TMP_DIR/src/sbin/sympa_wizard.pl"
    sudo $SYMPA_WIZARD --check
    sudo $SYMPA_WIZARD --batch \
        email=sympa \
@@ -166,7 +148,6 @@ function configure_postfix()
     postmap /etc/mail/sympa_general_aliases
 
     # Add postfix conf hook
-    cp $SYMPA_POSTFIX_REGEN_CONF_HOOK /usr/share/yunohost/hooks/conf_regen/
     yunohost service regen-conf postfix
 }
 
