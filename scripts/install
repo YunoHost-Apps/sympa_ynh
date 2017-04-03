@@ -70,7 +70,7 @@ function install_sympa_dependencies()
         libnet-ldap-perl libproc-processtable-perl libregexp-common-perl \
         libscalar-list-utils-perl libsoap-lite-perl libssl-dev libtemplate-perl \
         libterm-progressbar-perl libunicode-linebreak-perl liburi-perl \
-        libwww-perl libxml2-dev libxml-libxml-perl libxml-perl \
+        libwww-perl libxml2-dev libxml-libxml-perl libxml-perl spawn-fcgi
 
     rm -f /tmp/sympa-cpan-deps-install.log
     CPANDEPENDENCIES="MHonArc::UTF8 MIME::Charset"
@@ -153,7 +153,6 @@ function configure_postfix()
 
 function install_fcgi_service()
 {
-    sudo apt-get install -y spawn-fcgi
     sed -i "s@__SYMPA_PORT__@$SYMPA_FCGI_PORT@g" $SYMPA_FCGI_SERVICE_TEMPLATE
     sed -i "s@__SYMPA_HOME__@$SYMPA_HOME@g" $SYMPA_FCGI_SERVICE_TEMPLATE
     sudo cp $SYMPA_FCGI_SERVICE_TEMPLATE /etc/systemd/system/sympa-fcgi.service

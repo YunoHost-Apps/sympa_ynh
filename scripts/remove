@@ -20,20 +20,28 @@ ynh_mysql_drop_db sympa
 # Remove dependencies
 ynh_remove_app_dependencies
 
+# Remove CPAN dependencies
+# We don't do that because those CPAN module could be used by other software
+
 # Remove nginx configuration file
 sudo rm -f /etc/nginx/conf.d/$DOMAIN.d/$APP.conf
 
 # Remove yunohost custom hooks
 rm /etc/yunohost/hooks.d/conf_regen/98-postfix_sympa
 rm /etc/yunohost/hooks.d/conf_regen/99-sympa
+rm /usr/share/yunohost/templates/sympa/ldap.conf
+
+# /etc/mail/sympa_general_aliases
+#TODO
 
 # Remove sympa services
 yunohost service remove sympa
 
-cd /etc/systemd/system/
+systemctl stop sympa.service
+systemctl stop sympa-fcgi.service
 systemctl disable sympa.service
 systemctl disable sympa-fcgi.service
-rm sympa*
+rm /etc/systemd/system/sympa*
 systemctl daemon-reload
 
 # Remove home dir / install dir
