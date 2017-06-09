@@ -6,14 +6,14 @@ set -eu
 # Arguments from manifest
 readonly APP=$YNH_APP_INSTANCE_NAME
 readonly DOMAIN=$YNH_APP_ARG_DOMAIN
+readonly DOMAIN_PREFIX=$YNH_APP_ARG_PREFIX
 readonly APP_URI=$YNH_APP_ARG_PATH
 readonly APP_ADMIN=$YNH_APP_ARG_ADMIN
 readonly APP_LANGUAGE=$YNH_APP_ARG_LANGUAGE
 readonly APP_IS_PUBLIC="1"
 
 readonly NGINX_CONF_TEMPLATE="$PWD/../conf/nginx.conf"
-readonly REGEN_CONF_HOOK="$PWD/../hooks/conf_regen"
-readonly SYMPA_POSTFIX_REGEN_CONF_HOOK="$PWD/../hooks/98-postfix_sympa"
+readonly SYMPA_REGEN_CONF_HOOKS="$PWD/../hooks/conf_regen/*"
 readonly SYMPA_GENERAL_ALIASES="$PWD/../conf/sympa_general_aliases"
 readonly SYMPA_FCGI_SERVICE_TEMPLATE="$PWD/../conf/sympa-fcgi.service"
 readonly SYMPA_HOME="/home/sympa"
@@ -106,7 +106,10 @@ function install_sympa_from_sources()
    # (not sure at which point of the script to do this)
    mkdir -p /usr/share/yunohost/templates/sympa/ 
    cp $SYMPA_LDAP_TEMPLATE /usr/share/yunohost/templates/sympa/
-   cp -R $REGEN_CONF_HOOK /etc/yunohost/hooks.d/
+
+   # Configuration hooks
+   mkdir -p /etc/yunohost/hooks.d/conf_regen
+   cp -R $SYMPA_REGEN_CONF_HOOKS /etc/yunohost/hooks.d/conf_regen/
 }
 
 function configure_sympa()
@@ -122,15 +125,16 @@ function configure_sympa()
 
    SYMPA_WIZARD="$TMP_DIR/src/sbin/sympa_wizard.pl"
    sudo $SYMPA_WIZARD --check
-   sudo $SYMPA_WIZARD --batch \
-       email=sympa \
-       listmaster=$APP_ADMIN@$DOMAIN \
-       db_type=mysql \
-       db_name=sympa \
-       db_host=localhost \
-       db_user=$db_user \
-       db_passwd=$db_pwd \
-       cookie=$sympacookie \
+   sudo $SYMPA_WIZARD --batch           \
+       domain=$DOMAIN_PREFIX.$DOMAIN    \
+       email=sympa                      \
+       listmaster=$APP_ADMIN@$DOMAIN    \
+       db_type=mysql                    \
+       db_name=sympa                    \
+       db_host=localhost                \
+       db_user=$db_user                 \
+       db_passwd=$db_pwd                \
+       cookie=$sympacookie              \
        static_content_url=/sympa/static \
        lang=$APP_LANGUAGE
 
@@ -142,10 +146,10 @@ function configure_sympa()
 
 function configure_postfix()
 {
-    # FIXME - feels weird that this folder has to be created ???
     mkdir -p /etc/mail/
     cp $SYMPA_GENERAL_ALIASES /etc/mail/sympa_general_aliases
-    postmap /etc/mail/sympa_general_aliases
+    postalias /etc/mail/sympa_general_aliases
+    chown -R sympa:sympa /etc/mail/
 
     # Add postfix conf hook
     yunohost service regen-conf postfix

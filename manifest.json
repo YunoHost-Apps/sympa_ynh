@@ -54,6 +54,15 @@
                 "example": "johndoe"
             },
             {
+                "name": "prefix",
+                "ask": {
+                    "en": "Choose the prefix for lists. For example, choosing 'lists' as the prefix means that lists adresses will be of the form listname@lists.yourdomain.tld. Note that YOU NEED TO add a MX record for the domain <prefix>.yourdomain.tld in your DNS.",
+                    "fr": "Choisissez le prefixe pour les listes. Par exemple, choisir 'listes' comme préfixe signifie que les adresses de listes seront de la forme une_liste@listes.votredomaine.tld. Notez que VOUS DEVEZ ajouter un enregistrement MX pour le domaine <prefixe>.votredomaine.tld dans vos DNS."
+                },
+                "example": "lists",
+                "default": "lists"
+            },
+            {
                 "name": "language",
                 "ask": {
                     "en": "Choose the application language",
