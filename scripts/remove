@@ -27,8 +27,8 @@ ynh_remove_app_dependencies
 sudo rm -f /etc/nginx/conf.d/$DOMAIN.d/$APP.conf
 
 # Remove yunohost custom hooks
-rm /etc/yunohost/hooks.d/conf_regen/98-postfix_sympa
-rm /etc/yunohost/hooks.d/conf_regen/99-sympa
+rm -f /usr/share/yunohost/hooks/conf_regen/98-postfix_sympa
+rm -f /usr/share/yunohost/hooks/conf_regen/99-sympa
 rm /usr/share/yunohost/templates/sympa/ldap.conf
 
 # /etc/mail/sympa_general_aliases
@@ -43,6 +43,17 @@ systemctl disable sympa.service
 systemctl disable sympa-fcgi.service
 rm /etc/systemd/system/sympa*
 systemctl daemon-reload
+
+# Remove swap added for Sympa
+if [[ ! -z $(mount | grep /tmp | grep tmpfs) ]];
+then
+    tmp_swap_file=/var/cache/sympa_swapfile
+else
+    tmp_swap_file=/tmp/sympa_swapfile
+fi
+
+sudo swapoff $tmp_swap_file
+sudo rm -f $tmp_swap_file
 
 # Remove home dir / install dir
 install_dir="/home/sympa"

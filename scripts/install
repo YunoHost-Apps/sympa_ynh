@@ -7,13 +7,14 @@ set -eu
 readonly APP=$YNH_APP_INSTANCE_NAME
 readonly DOMAIN=$YNH_APP_ARG_DOMAIN
 readonly DOMAIN_PREFIX=$YNH_APP_ARG_PREFIX
+readonly SWAP_ACK=$YNH_APP_ARG_SWAP_ACK
 readonly APP_URI=$YNH_APP_ARG_PATH
 readonly APP_ADMIN=$YNH_APP_ARG_ADMIN
 readonly APP_LANGUAGE=$YNH_APP_ARG_LANGUAGE
 readonly APP_IS_PUBLIC="1"
 
 readonly NGINX_CONF_TEMPLATE="$PWD/../conf/nginx.conf"
-readonly SYMPA_REGEN_CONF_HOOKS="$PWD/../hooks/conf_regen/*"
+readonly SYMPA_REGEN_CONF_HOOKS="$PWD/../sources/hooks/conf_regen/*"
 readonly SYMPA_GENERAL_ALIASES="$PWD/../conf/sympa_general_aliases"
 readonly SYMPA_FCGI_SERVICE_TEMPLATE="$PWD/../conf/sympa-fcgi.service"
 readonly SYMPA_HOME="/home/sympa"
@@ -28,6 +29,30 @@ readonly SYMPA_FCGI_PORT=$(ynh_find_port 8442)
 
 readonly SYMPA_VERSION="sympa-6.2.16"
 readonly TMP_DIR="/tmp/sympa-install"
+
+function add_swap()
+{
+    if [[ $SWAP_ACK != "Yes" ]];
+    then
+        echo "You need to agree with adding swap to install this app" >&2
+        exit 1
+    fi
+
+    local tmp_swap_file=/tmp/sympa_swapfile
+
+    # It is NOT possible to setup a swap file on a tmpfs filesystem
+    if [[ ! -z $(mount | grep /tmp | grep tmpfs) ]];
+    then
+        tmp_swap_file=/var/cache/sympa_swapfile
+    fi
+
+    # (Assume that Sympa will need about ~512 Mo of RAM)
+    sudo dd if=/dev/zero of=$tmp_swap_file bs=1M count=512
+    sudo chmod 600 $tmp_swap_file
+    sudo mkswap $tmp_swap_file
+    sudo swapon $tmp_swap_file
+}
+
 
 function configure_app()
 {
@@ -55,29 +80,33 @@ function init_sympa_mysqldb()
 
 function install_sympa_dependencies()
 {
-    ynh_install_app_dependencies \
-        build-essential mhonarc xml-twig-tools \
-        libarchive-zip-perl libauthcas-perl libcgi-fast-perl libcgi-pm-perl \
-        libclass-singleton-perl libclone-perl libcrypt-ciphersaber-perl \
-        libcrypt-openssl-x509-perl libcrypt-smime-perl libdata-password-perl \
-        libdatetime-format-mail-perl libdatetime-timezone-perl libdbd-csv-perl \
-        libdbi-perl libemail-simple-perl libencode-perl \
-        libfile-copy-recursive-perl libfile-nfslock-perl libhtml-format-perl \
-        libhtml-stripscripts-parser-perl libhtml-tree-perl libintl-perl \
-        libio-stringy-perl libmail-dkim-perl libmailtools-perl \
-        libmime-charset-perl libmime-encwords-perl libmime-lite-html-perl \
-        libmime-tools-perl libmsgcat-perl libnet-cidr-perl libnet-dns-perl \
-        libnet-ldap-perl libproc-processtable-perl libregexp-common-perl \
+    ynh_install_app_dependencies                                                \
+        build-essential mhonarc xml-twig-tools                                  \
+        libarchive-zip-perl libauthcas-perl libcgi-fast-perl libcgi-pm-perl     \
+        libclass-singleton-perl libclone-perl libcrypt-ciphersaber-perl         \
+        libcrypt-openssl-x509-perl libcrypt-smime-perl libdata-password-perl    \
+        libdatetime-format-mail-perl libdatetime-timezone-perl libdbd-csv-perl  \
+        libdbi-perl libemail-simple-perl libencode-perl                         \
+        libfile-copy-recursive-perl libfile-nfslock-perl libhtml-format-perl    \
+        libhtml-stripscripts-parser-perl libhtml-tree-perl libintl-perl         \
+        libio-stringy-perl libmail-dkim-perl libmailtools-perl                  \
+        libmime-charset-perl libmime-encwords-perl libmime-lite-html-perl       \
+        libmime-tools-perl libmsgcat-perl libnet-cidr-perl libnet-dns-perl      \
+        libnet-ldap-perl libproc-processtable-perl libregexp-common-perl        \
         libscalar-list-utils-perl libsoap-lite-perl libssl-dev libtemplate-perl \
-        libterm-progressbar-perl libunicode-linebreak-perl liburi-perl \
+        libterm-progressbar-perl libunicode-linebreak-perl liburi-perl          \
         libwww-perl libxml2-dev libxml-libxml-perl libxml-perl spawn-fcgi
+
+    # Install cpanm because cpan is getting killed on VPS because it wants too
+    # much memory...
+    curl -L https://cpanmin.us | perl - --self-upgrade
 
     rm -f /tmp/sympa-cpan-deps-install.log
     CPANDEPENDENCIES="MHonArc::UTF8 MIME::Charset"
     for DEP in $CPANDEPENDENCIES
     do
         echo "Installing CPAN module $DEP ..."
-        echo "yes" | sudo cpan -T $DEP >> /tmp/sympa-cpan-deps-install.log 2>&1
+        echo "yes" | sudo cpanm $DEP >> /tmp/sympa-cpan-deps-install.log 2>&1
     done
 }
 
@@ -86,7 +115,7 @@ function install_sympa_from_sources()
    # Create a user with its home
    sudo adduser --disabled-login --gecos Sympa sympa || true
    mkdir -p $SYMPA_HOME
-   
+
    # Download, check integrity and unpack
    ynh_setup_source $TMP_DIR
    cd $TMP_DIR
@@ -104,12 +133,12 @@ function install_sympa_from_sources()
 
    # LDAP part
    # (not sure at which point of the script to do this)
-   mkdir -p /usr/share/yunohost/templates/sympa/ 
+   mkdir -p /usr/share/yunohost/templates/sympa/
    cp $SYMPA_LDAP_TEMPLATE /usr/share/yunohost/templates/sympa/
 
    # Configuration hooks
    mkdir -p /etc/yunohost/hooks.d/conf_regen
-   cp -R $SYMPA_REGEN_CONF_HOOKS /etc/yunohost/hooks.d/conf_regen/
+   cp -R $SYMPA_REGEN_CONF_HOOKS /usr/share/yunohost/hooks/conf_regen/
 }
 
 function configure_sympa()
@@ -125,17 +154,19 @@ function configure_sympa()
 
    SYMPA_WIZARD="$TMP_DIR/src/sbin/sympa_wizard.pl"
    sudo $SYMPA_WIZARD --check
-   sudo $SYMPA_WIZARD --batch           \
-       domain=$DOMAIN_PREFIX.$DOMAIN    \
-       email=sympa                      \
-       listmaster=$APP_ADMIN@$DOMAIN    \
-       db_type=mysql                    \
-       db_name=sympa                    \
-       db_host=localhost                \
-       db_user=$db_user                 \
-       db_passwd=$db_pwd                \
-       cookie=$sympacookie              \
-       static_content_url=/sympa/static \
+   sudo $SYMPA_WIZARD --batch              \
+       domain=$DOMAIN_PREFIX.$DOMAIN       \
+       email=sympa                         \
+       listmaster=$APP_ADMIN@$DOMAIN       \
+       db_type=mysql                       \
+       db_name=sympa                       \
+       db_host=localhost                   \
+       db_user=$db_user                    \
+       db_passwd=$db_pwd                   \
+       cookie=$sympacookie                 \
+       static_content_url=/sympa/static    \
+       wwsympa_url=https://$DOMAIN$APP_URI \
+       dkim_signer_domain=$DOMAIN          \
        lang=$APP_LANGUAGE
 
    # Service part
@@ -189,6 +220,7 @@ function configure_nginx_and_ssowat()
 
 }
 
+add_swap
 configure_app
 init_sympa_mysqldb
 install_sympa_dependencies
