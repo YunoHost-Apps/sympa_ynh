@@ -25,7 +25,7 @@
 
 #### Tests
 
-- [ ] Test that creating a mailing list and sending mail actually works...
+- [X] Test that creating a mailing list and sending mail actually works...
 - [ ] Test install on an Internet Cube or Raspberry Pi
 
 #### Important features
