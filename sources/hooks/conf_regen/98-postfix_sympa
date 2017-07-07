@@ -11,11 +11,8 @@ do_pre_regen() {
   # FIXME : check this file actually exists to not crash when only running this
   # hook alone
 
-  listDomain=$(grep "^domain\s" /home/sympa/etc/sympa/sympa.conf | awk '{print $2}')
-
   sudo sed -e "s@^alias_maps\s*=\s*\(.*\)@alias_maps = \1,hash:/etc/mail/sympa_general_aliases,hash:/etc/mail/sympa_aliases@"\
-           -e "s@^alias_database\s*=\s*\(.*\)@alias_database = \1,hash:/etc/mail/sympa_general_aliases,hash:/etc/mail/sympa_aliases@"\
-           -e "s@^mydestination\s*=\s*\(.*\)@mydestination = \1,$listDomain@"\
+           -e "s@^virtual_alias_maps\s*=\s*\(.*\)@virtual_alias_maps = hash:/etc/mail/sympa_virtual_aliases,\1@"\
            -i $postfix_main_cf
 
 }

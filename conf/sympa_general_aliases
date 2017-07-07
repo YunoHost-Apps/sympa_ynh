@@ -1,6 +1,0 @@
-sympa: "| /home/sympa/bin/queue sympa@localhost.org"
-listmaster: "| /home/sympa/bin/queue listmaster@localhost.org"
-bounce+*: "| /home/sympa/bin/bouncequeue sympa@localhost.org"
-abuse-feedback-report: "| /home/sympa/bin/bouncequeue sympa@localhost.org"
-sympa-request: postmaster
-sympa-owner: postmaster

@@ -6,7 +6,6 @@ set -eu
 # Arguments from manifest
 readonly APP=$YNH_APP_INSTANCE_NAME
 readonly DOMAIN=$YNH_APP_ARG_DOMAIN
-readonly DOMAIN_PREFIX=$YNH_APP_ARG_PREFIX
 readonly SWAP_ACK=$YNH_APP_ARG_SWAP_ACK
 readonly APP_URI=$YNH_APP_ARG_PATH
 readonly APP_ADMIN=$YNH_APP_ARG_ADMIN
@@ -15,7 +14,7 @@ readonly APP_IS_PUBLIC="1"
 
 readonly NGINX_CONF_TEMPLATE="$PWD/../conf/nginx.conf"
 readonly SYMPA_REGEN_CONF_HOOKS="$PWD/../sources/hooks/conf_regen/*"
-readonly SYMPA_GENERAL_ALIASES="$PWD/../conf/sympa_general_aliases"
+readonly YNH_SYMPA_ALIAS_MANAGER="$PWD/../sources/yunohost_alias_manager.sh"
 readonly SYMPA_FCGI_SERVICE_TEMPLATE="$PWD/../conf/sympa-fcgi.service"
 readonly SYMPA_HOME="/home/sympa"
 readonly SYMPA_LDAP_TEMPLATE="$PWD/../conf/ldap.conf"
@@ -80,7 +79,10 @@ function init_sympa_mysqldb()
 
 function install_sympa_dependencies()
 {
+    echo "Installing Sympa dependencies... This might take some time" 1>&2
+
     ynh_install_app_dependencies                                                \
+        cpanminus                                                               \
         build-essential mhonarc xml-twig-tools                                  \
         libarchive-zip-perl libauthcas-perl libcgi-fast-perl libcgi-pm-perl     \
         libclass-singleton-perl libclone-perl libcrypt-ciphersaber-perl         \
@@ -96,10 +98,6 @@ function install_sympa_dependencies()
         libscalar-list-utils-perl libsoap-lite-perl libssl-dev libtemplate-perl \
         libterm-progressbar-perl libunicode-linebreak-perl liburi-perl          \
         libwww-perl libxml2-dev libxml-libxml-perl libxml-perl spawn-fcgi
-
-    # Install cpanm because cpan is getting killed on VPS because it wants too
-    # much memory...
-    curl -L https://cpanmin.us | perl - --self-upgrade
 
     rm -f /tmp/sympa-cpan-deps-install.log
     CPANDEPENDENCIES="MHonArc::UTF8 MIME::Charset"
@@ -139,6 +137,9 @@ function install_sympa_from_sources()
    # Configuration hooks
    mkdir -p /etc/yunohost/hooks.d/conf_regen
    cp -R $SYMPA_REGEN_CONF_HOOKS /usr/share/yunohost/hooks/conf_regen/
+
+   # Add custom alias manager
+   cp $YNH_SYMPA_ALIAS_MANAGER $SYMPA_HOME/sbin/
 }
 
 function configure_sympa()
@@ -155,7 +156,7 @@ function configure_sympa()
    SYMPA_WIZARD="$TMP_DIR/src/sbin/sympa_wizard.pl"
    sudo $SYMPA_WIZARD --check
    sudo $SYMPA_WIZARD --batch              \
-       domain=$DOMAIN_PREFIX.$DOMAIN       \
+       domain=$DOMAIN                      \
        email=sympa                         \
        listmaster=$APP_ADMIN@$DOMAIN       \
        db_type=mysql                       \
@@ -169,20 +170,23 @@ function configure_sympa()
        dkim_signer_domain=$DOMAIN          \
        lang=$APP_LANGUAGE
 
+   echo "alias_manager $SYMPA_HOME/sbin/yunohost_alias_manager.sh" >> $SYMPA_HOME/etc/sympa/sympa.conf
+
    # Service part
    sudo systemctl daemon-reload
-   sudo systemctl enable sympa.service
+   sudo systemctl enable sympa.service 2>/dev/null
    yunohost service add sympa
 }
 
 function configure_postfix()
 {
     mkdir -p /etc/mail/
-    cp $SYMPA_GENERAL_ALIASES /etc/mail/sympa_general_aliases
-    postalias /etc/mail/sympa_general_aliases
+    touch /etc/mail/sympa_aliases
+    touch /etc/mail/sympa_virtual_aliases
+    postalias /etc/mail/sympa_aliases
+    postmap /etc/mail/sympa_virtual_aliases
     chown -R sympa:sympa /etc/mail/
 
-    # Add postfix conf hook
     yunohost service regen-conf postfix
 }
 
@@ -193,7 +197,7 @@ function install_fcgi_service()
     sudo cp $SYMPA_FCGI_SERVICE_TEMPLATE /etc/systemd/system/sympa-fcgi.service
 
     sudo systemctl daemon-reload
-    sudo systemctl enable sympa-fcgi.service
+    sudo systemctl enable sympa-fcgi.service 2>/dev/null
 }
 
 function start_sympa

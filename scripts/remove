@@ -31,16 +31,16 @@ rm -f /usr/share/yunohost/hooks/conf_regen/98-postfix_sympa
 rm -f /usr/share/yunohost/hooks/conf_regen/99-sympa
 rm /usr/share/yunohost/templates/sympa/ldap.conf
 
-# /etc/mail/sympa_general_aliases
-#TODO
+# Remove aliases files
+rm /etc/mail/sympa_*
 
 # Remove sympa services
 yunohost service remove sympa
 
 systemctl stop sympa.service
 systemctl stop sympa-fcgi.service
-systemctl disable sympa.service
-systemctl disable sympa-fcgi.service
+systemctl disable sympa.service 2>/dev/null
+systemctl disable sympa-fcgi.service 2>/dev/null
 rm /etc/systemd/system/sympa*
 systemctl daemon-reload
 
@@ -60,7 +60,7 @@ install_dir="/home/sympa"
 ynh_secure_remove $install_dir
 
 # Delete system user
-ynh_system_user_delete sympa
+ynh_system_user_delete sympa 2>/dev/null
 
 # Reload nginx service
 sudo service nginx reload
