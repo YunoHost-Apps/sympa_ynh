@@ -46,3 +46,5 @@
 ## Special thanks
 
 Many thanks to framasky, fmenade, ljf and the Sympa team for their help during the [Sympa hackaton in April 2017](https://framablog.org/2017/03/30/un-hackathon-pour-sympa/) !
+
+Also thanks to Sandhose and Jean B. for the helpful hand with Postfix config.
