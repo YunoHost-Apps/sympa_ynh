@@ -28,8 +28,8 @@
             {
                 "name": "swap_ack",
                 "ask": {
-                    "en": "This application needs 500 Mo of RAM. The install script will automatically add swap on the system. Swap is not good if it's on an SD card life, though. Do you agree with adding swap (required) ?",
-                    "fr": "Cette application necessite 500 Mo de RAM. Le script d'installation va automatiquement ajouter du swap sur le systeme. Cependant, l'utilisation de swap risque de diminuer sa duree de vie. Etes-vous d'accord avec l'ajout de swap (requis) ?"
+                    "en": "This application needs 500 Mo of RAM. The install script will automatically add swap on the system. Swap is not good if it's on an SD card life, though. Do you agree with adding swap (required, but doesn't work with BTRFS filesystem on /tmp) ?",
+                    "fr": "Cette application necessite 500 Mo de RAM. Le script d'installation va automatiquement ajouter du swap sur le systeme. Cependant, l'utilisation de swap risque de diminuer sa duree de vie. Etes-vous d'accord avec l'ajout de swap (requis, mais ne fonctionne pas avec BTRFS comme système de fichier sur /tmp) ?"
                 },
                 "choices": [ "Yes", "No" ],
                 "default": "No"
