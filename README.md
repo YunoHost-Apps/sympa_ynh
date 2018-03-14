@@ -10,7 +10,11 @@
 
 ## Status
 
-:warning: THIS APP IS UNDER HEAVY DEVELOPMENT. DO NO INSTALL IN PRODUCTION :warning:
+:warning: This app is ~kinda working but using it in production is at your own risk... The app hasnt been tested in details, is not entirely integrated with YunoHost, and is unmaintained.
+
+:warning: Also, DO NOT INSTALL ON A SERVER WITH LOW RAM (<1 GB). Sympa takes *FIVE HUNDRED MEGABYTES OF RAM* constantly, c.f. : https://github.com/sympa-community/sympa/issues/24
+
+If you want a lightweight mailing list manager, have a look at the Mailman2 package : https://github.com/YunoHost-Apps/mailman_ynh (yes it's ugly but it does the job)
 
 ## To-do / roadmap
 
