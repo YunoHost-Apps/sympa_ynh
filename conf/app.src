@@ -1,5 +1,5 @@
 SOURCE_URL=https://github.com/sympa-community/sympa/releases/download/6.2.25b.2/sympa-6.2.25b.2.tar.gz
 SOURCE_FILENAME=sympa-6.2.25b.2.tar.gz
 SOURCE_FORMAT=tar.gz
-SOURCE_SUM=cc9dea56afc159ef3bacf6c9b09ae338
+SOURCE_SUM=896a4419212548cfcaff1293528f3ab3
 SOURCE_SUM_PRG=md5sum
