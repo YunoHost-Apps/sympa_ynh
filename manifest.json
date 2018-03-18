@@ -7,7 +7,7 @@
         "fr": "Gestionnaire de liste de diffusion"
     },
     "url": "https://www.sympa.org/",
-    "version": "6.2.16-1",
+    "version": "6.2.25b-2",
     "license": "free",
     "maintainer": {
         "name": "alexAubin",
