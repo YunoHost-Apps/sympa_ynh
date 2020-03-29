@@ -1,5 +1,7 @@
 # Sympa for Yunohost
 
+[![Integration level](https://dash.yunohost.org/integration/sympa.svg)](https://dash.yunohost.org/appci/app/sympa) ![](https://ci-apps.yunohost.org/ci/badges/sympa.status.svg) ![](https://ci-apps.yunohost.org/ci/badges/sympa.maintain.svg)
+
 ![](http://www.sympa.org/_media/logo_sympa.png)
 
 **Sympa is a mailing-list manager**
